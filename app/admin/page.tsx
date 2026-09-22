@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
+
 export default function AdminDashboard() {
   return (
     <main
       style={{
         minHeight: "100vh",
         background: "#f5f7fb",
-        padding: "30px",
+        padding: "40px 20px",
       }}
     >
       <div
@@ -15,158 +17,149 @@ export default function AdminDashboard() {
           margin: "0 auto",
         }}
       >
-        <header
+        <nav
           style={{
-            background: "#111827",
-            color: "white",
-            padding: "24px 28px",
-            borderRadius: "14px",
-            marginBottom: "25px",
+            display: "flex",
+            gap: "12px",
+            marginBottom: "30px",
+            flexWrap: "wrap",
           }}
         >
-          <h1 style={{ margin: 0, fontSize: "28px" }}>
-            Admin Dashboard
-          </h1>
+          <Link href="/admin" style={navLinkStyle}>
+            Dashboard
+          </Link>
 
-          <p style={{ margin: "8px 0 0", opacity: 0.8 }}>
-            Employee Task & Reporting Portal
-          </p>
-        </header>
+          <Link
+            href="/admin/employees"
+            style={navLinkStyle}
+          >
+            Add Employee
+          </Link>
 
-        <section
+          <Link
+            href="/admin/employees/list"
+            style={navLinkStyle}
+          >
+            Employees
+          </Link>
+
+          <Link
+            href="/admin/tasks"
+            style={navLinkStyle}
+          >
+            Create Task
+          </Link>
+
+          <Link
+            href="/admin/tasks/list"
+            style={navLinkStyle}
+          >
+            Tasks
+          </Link>
+
+          <Link
+            href="/admin/reports"
+            style={navLinkStyle}
+          >
+            Reports
+          </Link>
+        </nav>
+
+        <h1>Admin Dashboard</h1>
+
+        <p style={{ color: "#6b7280" }}>
+          Manage employees, tasks and reports.
+        </p>
+
+        <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(220px, 1fr))",
             gap: "20px",
+            marginTop: "30px",
           }}
         >
           <DashboardCard
             title="Employees"
-            value="0"
-            description="Manage employees"
+            description="Add and manage employees"
+            href="/admin/employees/list"
           />
 
           <DashboardCard
             title="Tasks"
-            value="0"
-            description="View and manage tasks"
-          />
-
-          <DashboardCard
-            title="Pending"
-            value="0"
-            description="Tasks awaiting completion"
+            description="Create and view employee tasks"
+            href="/admin/tasks/list"
           />
 
           <DashboardCard
             title="Reports"
-            value="0"
-            description="Review submitted reports"
+            description="Review employee reports"
+            href="/admin/reports"
           />
-        </section>
 
-        <section
-          style={{
-            background: "white",
-            marginTop: "25px",
-            padding: "25px",
-            borderRadius: "14px",
-            boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Admin Actions</h2>
+          <DashboardCard
+            title="Add Employee"
+            description="Create a new employee account"
+            href="/admin/employees"
+          />
 
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              flexWrap: "wrap",
-            }}
-          >
-            <button className="admin-button">
-              Add Employee
-            </button>
-
-            <button className="admin-button">
-              View Employees
-            </button>
-
-            <button className="admin-button">
-              View Tasks
-            </button>
-
-            <button className="admin-button">
-              View Reports
-            </button>
-          </div>
-        </section>
+          <DashboardCard
+            title="Create Task"
+            description="Assign a new task"
+            href="/admin/tasks"
+          />
+        </div>
       </div>
-
-      <style jsx>{`
-        .admin-button {
-          border: none;
-          background: #111827;
-          color: white;
-          padding: 12px 18px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-        }
-
-        .admin-button:hover {
-          opacity: 0.9;
-        }
-      `}</style>
     </main>
   );
 }
 
 function DashboardCard({
   title,
-  value,
   description,
+  href,
 }: {
   title: string;
-  value: string;
   description: string;
+  href: string;
 }) {
   return (
-    <div
+    <Link
+      href={href}
       style={{
         background: "white",
-        padding: "24px",
+        padding: "25px",
         borderRadius: "14px",
         boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+        textDecoration: "none",
+        color: "#111827",
       }}
     >
-      <p
-        style={{
-          margin: 0,
-          color: "#6b7280",
-          fontSize: "14px",
-        }}
-      >
-        {title}
-      </p>
+      <h2 style={{ marginTop: 0 }}>{title}</h2>
 
-      <h2
-        style={{
-          fontSize: "32px",
-          margin: "10px 0",
-        }}
-      >
-        {value}
-      </h2>
-
-      <p
-        style={{
-          margin: 0,
-          color: "#6b7280",
-          fontSize: "13px",
-        }}
-      >
+      <p style={{ color: "#6b7280" }}>
         {description}
       </p>
-    </div>
+
+      <span
+        style={{
+          color: "#2563eb",
+          fontWeight: 600,
+        }}
+      >
+        Open →
+      </span>
+    </Link>
   );
 }
+
+const navLinkStyle = {
+  textDecoration: "none",
+  color: "#111827",
+  background: "white",
+  padding: "10px 16px",
+  borderRadius: "8px",
+  border: "1px solid #e5e7eb",
+  fontWeight: 600,
+};

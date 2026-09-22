@@ -1,14 +1,192 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import connectDB from "@/lib/mongodb";
-import Task from "@/models/Task";
+import Employee from "@/models/Employee";
 
-// GET TASKS FOR AN EMPLOYEE
-export async function GET(request: Request) {
+const DEFAULT_PASSWORD = "Employee@123";
+
+// CREATE EMPLOYEE
+export async function POST(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const employeeId = searchParams.get("employeeId");
+    const { name, designation, email } = await request.json();
 
-    if (!employeeId) {
+    if (!name || !designation || !email) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Name, designation and email are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existingEmployee = await Employee.findOne({
+      email: normalizedEmail,
+    });
+
+    if (existingEmployee) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "An employee with this email already exists",
+        },
+        { status: 409 }
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
+    const employee = await Employee.create({
+      name: name.trim(),
+      designation: designation.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: "employee",
+      isActive: true,
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Employee created successfully",
+        employee: {
+          id: employee._id,
+          name: employee.name,
+          designation: employee.designation,
+          email: employee.email,
+          role: employee.role,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Create employee error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Something went wrong",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// GET ALL EMPLOYEES
+export async function GET() {
+  try {
+    await connectDB();
+
+    const employees = await Employee.find(
+      { role: "employee" },
+      { password: 0 }
+    ).sort({ createdAt: -1 });
+
+    return NextResponse.json({
+      success: true,
+      employees,
+    });
+  } catch (error) {
+    console.error("Get employees error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to load employees",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// UPDATE EMPLOYEE
+export async function PUT(request: Request) {
+  try {
+    const { id, name, designation, email, isActive } =
+      await request.json();
+
+    if (!id || !name || !designation || !email) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Employee ID, name, designation and email are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existingEmployee = await Employee.findOne({
+      email: normalizedEmail,
+      _id: { $ne: id },
+    });
+
+    if (existingEmployee) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Another employee already uses this email",
+        },
+        { status: 409 }
+      );
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      id,
+      {
+        name: name.trim(),
+        designation: designation.trim(),
+        email: normalizedEmail,
+        isActive,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).select("-password");
+
+    if (!employee) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Employee not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Employee updated successfully",
+      employee,
+    });
+  } catch (error) {
+    console.error("Update employee error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to update employee",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// RESET EMPLOYEE PASSWORD
+export async function PATCH(request: Request) {
+  try {
+    const { id } = await request.json();
+
+    if (!id) {
       return NextResponse.json(
         {
           success: false,
@@ -20,78 +198,23 @@ export async function GET(request: Request) {
 
     await connectDB();
 
-    const tasks = await Task.find({
-      assignedTo: employeeId,
-    })
-      .populate("assignedTo", "name designation email")
-      .sort({ createdAt: -1 });
+    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
 
-    return NextResponse.json({
-      success: true,
-      tasks,
-    });
-  } catch (error) {
-    console.error("Get employee tasks error:", error);
-
-    return NextResponse.json(
+    const employee = await Employee.findByIdAndUpdate(
+      id,
       {
-        success: false,
-        message: "Failed to load employee tasks",
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// UPDATE TASK STATUS
-export async function PATCH(request: Request) {
-  try {
-    const { taskId, status } = await request.json();
-
-    if (!taskId || !status) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Task ID and status are required",
-        },
-        { status: 400 }
-      );
-    }
-
-    const allowedStatuses = [
-      "pending",
-      "in-progress",
-      "completed",
-    ];
-
-    if (!allowedStatuses.includes(status)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid task status",
-        },
-        { status: 400 }
-      );
-    }
-
-    await connectDB();
-
-    const task = await Task.findByIdAndUpdate(
-      taskId,
-      {
-        status,
+        password: hashedPassword,
       },
       {
         new: true,
-        runValidators: true,
       }
-    ).populate("assignedTo", "name designation email");
+    ).select("-password");
 
-    if (!task) {
+    if (!employee) {
       return NextResponse.json(
         {
           success: false,
-          message: "Task not found",
+          message: "Employee not found",
         },
         { status: 404 }
       );
@@ -99,16 +222,20 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Task status updated successfully",
-      task,
+      message: "Employee password reset successfully",
+      employee: {
+        id: employee._id,
+        name: employee.name,
+        email: employee.email,
+      },
     });
   } catch (error) {
-    console.error("Update task status error:", error);
+    console.error("Reset password error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to update task status",
+        message: "Failed to reset employee password",
       },
       { status: 500 }
     );

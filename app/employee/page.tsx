@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface Employee {
   _id: string;
@@ -131,6 +132,26 @@ export default function EmployeeDashboard() {
           margin: "0 auto",
         }}
       >
+        <nav
+          style={{
+            display: "flex",
+            gap: "12px",
+            marginBottom: "30px",
+            flexWrap: "wrap",
+          }}
+        >
+          <Link href="/employee" style={navLinkStyle}>
+            Dashboard
+          </Link>
+
+          <Link
+            href="/employee/reports"
+            style={navLinkStyle}
+          >
+            My Reports
+          </Link>
+        </nav>
+
         <h1>Employee Dashboard</h1>
 
         <p style={{ color: "#6b7280" }}>
@@ -206,9 +227,7 @@ export default function EmployeeDashboard() {
                   </span>
                 </p>
 
-                <label>
-                  Update Status
-                </label>
+                <label>Update Status</label>
 
                 <select
                   value={task.status}
@@ -250,3 +269,13 @@ export default function EmployeeDashboard() {
     </main>
   );
 }
+
+const navLinkStyle = {
+  textDecoration: "none",
+  color: "#111827",
+  background: "white",
+  padding: "10px 16px",
+  borderRadius: "8px",
+  border: "1px solid #e5e7eb",
+  fontWeight: 600,
+};
