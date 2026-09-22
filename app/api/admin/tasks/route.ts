@@ -1,28 +1,15 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Task from "@/models/Task";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { requireRole } from "@/lib/auth/guards";
 
 const ALLOWED_PRIORITIES = ["low", "medium", "high"];
 
-// CREATE TASK (admin assigning a task to an employee)
+// CREATE TASK
 export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    if (user.role !== "admin") {
-      return NextResponse.json(
-        { success: false, message: "Access denied" },
-        { status: 403 }
-      );
-    }
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
 
     const { title, description, assignedTo, dueDate, priority } =
       await request.json();
@@ -39,7 +26,10 @@ export async function POST(request: Request) {
 
     if (priority && !ALLOWED_PRIORITIES.includes(priority)) {
       return NextResponse.json(
-        { success: false, message: "Invalid priority" },
+        {
+          success: false,
+          message: "Invalid priority",
+        },
         { status: 400 }
       );
     }
@@ -50,13 +40,16 @@ export async function POST(request: Request) {
       title: title.trim(),
       description: description?.trim(),
       assignedTo,
-      createdBy: user.id,
+      createdBy: auth.user.id,
       dueDate: dueDate ? new Date(dueDate) : undefined,
       priority: priority || "medium",
       status: "pending",
     });
 
-    await task.populate("assignedTo", "name designation email");
+    await task.populate(
+      "assignedTo",
+      "name designation email"
+    );
 
     return NextResponse.json(
       {
@@ -82,21 +75,8 @@ export async function POST(request: Request) {
 // GET ALL TASKS
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    if (user.role !== "admin") {
-      return NextResponse.json(
-        { success: false, message: "Access denied" },
-        { status: 403 }
-      );
-    }
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
 
     await connectDB();
 
