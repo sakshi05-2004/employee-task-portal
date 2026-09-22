@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Report from "@/models/Report";
+import { requireRole } from "@/lib/auth/guards";
 
 // GET ALL REPORTS
 export async function GET() {
   try {
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
+
     await connectDB();
 
     const reports = await Report.find()

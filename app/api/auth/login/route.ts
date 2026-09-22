@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectDB from "@/lib/mongodb";
 import Employee from "@/models/Employee";
+import { createSession } from "@/lib/auth/session";
+import { setSessionCookie } from "@/lib/auth/cookie";
 
 export async function POST(request: Request) {
   try {
@@ -40,7 +42,15 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({
+    const sessionToken = await createSession({
+      id: employee._id.toString(),
+      name: employee.name,
+      email: employee.email,
+      role: employee.role,
+      mustChangePassword: employee.mustChangePassword,
+    });
+
+    const response = NextResponse.json({
       success: true,
       message: "Login successful",
       user: {
@@ -48,8 +58,13 @@ export async function POST(request: Request) {
         name: employee.name,
         email: employee.email,
         role: employee.role,
+        mustChangePassword: employee.mustChangePassword,
       },
     });
+
+    setSessionCookie(response, sessionToken);
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
 

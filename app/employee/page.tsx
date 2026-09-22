@@ -1,48 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-
-interface Employee {
-  _id: string;
-  name: string;
-  designation?: string;
-  email: string;
-}
-
-interface Task {
-  _id: string;
-  title: string;
-  description?: string;
-  assignedTo: Employee;
-  status: "pending" | "in-progress" | "completed";
-  dueDate?: string;
-  createdAt: string;
-}
+import { FormEvent, useEffect, useState } from "react";
+import KanbanBoard from "@/components/KanbanBoard";
+import type { Task, TaskPriority, TaskStatus } from "@/lib/types";
 
 export default function EmployeeDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState(false);
 
-  const employeeId = "6ab222a17485c460504d239e";
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [creating, setCreating] = useState(false);
 
   async function loadTasks() {
     try {
-      const response = await fetch(
-        `/api/employee/tasks?employeeId=${employeeId}`
-      );
-
+      const response = await fetch("/api/employee/tasks");
       const data = await response.json();
 
       if (!response.ok) {
         setMessage(data.message || "Failed to load tasks");
+        setError(true);
         return;
       }
 
       setTasks(data.tasks);
     } catch {
       setMessage("Something went wrong while loading tasks.");
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -52,230 +41,182 @@ export default function EmployeeDashboard() {
     loadTasks();
   }, []);
 
-  async function updateStatus(
-    taskId: string,
-    status: Task["status"]
-  ) {
+  async function handleStatusChange(taskId: string, status: TaskStatus) {
+    const previous = tasks;
+    setTasks((current) =>
+      current.map((task) => (task._id === taskId ? { ...task, status } : task))
+    );
+
     try {
       const response = await fetch("/api/employee/tasks", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, status }),
+      });
+
+      if (!response.ok) throw new Error();
+      setMessage("Task status updated.");
+      setError(false);
+    } catch {
+      setTasks(previous);
+      setMessage("Failed to update task status.");
+      setError(true);
+    }
+  }
+
+  async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreating(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/employee/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          taskId,
-          status,
+          title,
+          description,
+          dueDate: dueDate || undefined,
+          priority,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message || "Failed to update status");
+        setMessage(data.message || "Failed to create task");
+        setError(true);
         return;
       }
 
-      setTasks((currentTasks) =>
-        currentTasks.map((task) =>
-          task._id === taskId
-            ? { ...task, status }
-            : task
-        )
-      );
+      setTasks((current) => [data.task, ...current]);
+      setMessage("Task added to your board.");
+      setError(false);
+      setTitle("");
+      setDescription("");
+      setDueDate("");
+      setPriority("medium");
+      setShowForm(false);
     } catch {
       setMessage("Something went wrong.");
+      setError(true);
+    } finally {
+      setCreating(false);
     }
-  }
-
-  function formatDate(date?: string) {
-    if (!date) return "-";
-
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  }
-
-  function getStatusStyle(status: Task["status"]) {
-    if (status === "completed") {
-      return {
-        background: "#dcfce7",
-        color: "#166534",
-      };
-    }
-
-    if (status === "in-progress") {
-      return {
-        background: "#fef3c7",
-        color: "#92400e",
-      };
-    }
-
-    return {
-      background: "#fee2e2",
-      color: "#991b1b",
-    };
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f5f7fb",
-        padding: "40px 20px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}
-      >
-        <nav
-          style={{
-            display: "flex",
-            gap: "12px",
-            marginBottom: "30px",
-            flexWrap: "wrap",
-          }}
-        >
-          <Link href="/employee" style={navLinkStyle}>
-            Dashboard
-          </Link>
-
-          <Link
-            href="/employee/reports"
-            style={navLinkStyle}
-          >
-            My Reports
-          </Link>
-        </nav>
-
-        <h1>Employee Dashboard</h1>
-
-        <p style={{ color: "#6b7280" }}>
-          View your assigned tasks and update their status.
-        </p>
-
-        {loading && <p>Loading tasks...</p>}
-
-        {message && (
-          <p style={{ color: "red" }}>
-            {message}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-ink-900">My Board</h1>
+          <p className="mt-1 text-sm text-ink-500">
+            Drag your tasks across stages, or allot a new one to yourself.
           </p>
-        )}
+        </div>
 
-        {!loading && !message && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "20px",
-              marginTop: "30px",
-            }}
-          >
-            {tasks.map((task) => (
-              <div
-                key={task._id}
-                style={{
-                  background: "white",
-                  padding: "22px",
-                  borderRadius: "14px",
-                  boxShadow:
-                    "0 5px 20px rgba(0,0,0,0.05)",
-                }}
-              >
-                <h2
-                  style={{
-                    marginTop: 0,
-                    fontSize: "20px",
-                  }}
-                >
-                  {task.title}
-                </h2>
-
-                {task.description && (
-                  <p
-                    style={{
-                      color: "#6b7280",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {task.description}
-                  </p>
-                )}
-
-                <p>
-                  <strong>Due Date:</strong>{" "}
-                  {formatDate(task.dueDate)}
-                </p>
-
-                <p>
-                  <strong>Status:</strong>{" "}
-                  <span
-                    style={{
-                      ...getStatusStyle(task.status),
-                      padding: "5px 9px",
-                      borderRadius: "999px",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {task.status}
-                  </span>
-                </p>
-
-                <label>Update Status</label>
-
-                <select
-                  value={task.status}
-                  onChange={(e) =>
-                    updateStatus(
-                      task._id,
-                      e.target.value as Task["status"]
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    marginTop: "8px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <option value="pending">
-                    Pending
-                  </option>
-
-                  <option value="in-progress">
-                    In Progress
-                  </option>
-
-                  <option value="completed">
-                    Completed
-                  </option>
-                </select>
-              </div>
-            ))}
-
-            {tasks.length === 0 && (
-              <p>No tasks assigned to you.</p>
-            )}
-          </div>
-        )}
+        <button
+          onClick={() => setShowForm((open) => !open)}
+          className="rounded-xl bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-ink-800"
+        >
+          {showForm ? "Cancel" : "+ New Task"}
+        </button>
       </div>
-    </main>
+
+      {showForm && (
+        <form
+          onSubmit={handleCreateTask}
+          className="flex flex-col gap-4 rounded-2xl border border-ink-100 bg-white p-6 shadow-sm"
+        >
+          <p className="text-sm font-semibold text-ink-800">
+            Allot a task to yourself
+          </p>
+
+          <div>
+            <label className="text-xs font-medium text-ink-500">Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="What do you need to do?"
+              className="mt-1 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-ink-500">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="mt-1 w-full resize-y rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-ink-500">
+                Due date
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ink-500">
+                Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as TaskPriority)}
+                className="mt-1 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={creating}
+            className="self-start rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            {creating ? "Adding…" : "Add to my board"}
+          </button>
+        </form>
+      )}
+
+      {message && (
+        <p
+          className={`rounded-xl px-4 py-2 text-sm ${
+            error ? "bg-danger-50 text-danger-600" : "bg-success-50 text-success-600"
+          }`}
+        >
+          {message}
+        </p>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-ink-400">Loading your tasks…</p>
+      ) : tasks.length === 0 ? (
+        <div className="rounded-2xl border border-ink-100 bg-white p-10 text-center text-sm text-ink-400 shadow-sm">
+          No tasks have been assigned to you yet. Add one with “New Task”.
+        </div>
+      ) : (
+        <KanbanBoard
+          tasks={tasks}
+          basePath="/employee/tasks"
+          onStatusChange={handleStatusChange}
+          emptyHint="Nothing here."
+        />
+      )}
+    </div>
   );
 }
-
-const navLinkStyle = {
-  textDecoration: "none",
-  color: "#111827",
-  background: "white",
-  padding: "10px 16px",
-  borderRadius: "8px",
-  border: "1px solid #e5e7eb",
-  fontWeight: 600,
-};

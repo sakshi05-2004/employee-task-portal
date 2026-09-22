@@ -7,6 +7,7 @@ export interface IEmployee extends Document {
   password: string;
   role: "admin" | "employee";
   isActive: boolean;
+  mustChangePassword: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +46,15 @@ const EmployeeSchema = new Schema<IEmployee>(
     },
 
     isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    // True whenever the employee is still on a password they did not
+    // choose themselves (a freshly created account or one that had its
+    // password reset by an admin). The login flow forces a password
+    // change before anything else is accessible while this is true.
+    mustChangePassword: {
       type: Boolean,
       default: true,
     },

@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f6;
+  --foreground: #211a16;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #faf8f6;
+    --foreground: #211a16;
+  }
 }
 
 @theme inline {
@@ -12,15 +19,81 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Startup Stairs brand — terracotta / burnt-orange, taken from the
+   organisation logo, paired with a warm ink neutral for text and a soft
+   parchment background. Declared as static theme tokens (this app does
+   not switch palettes for dark mode), so Tailwind generates utilities
+   like bg-brand-500, text-ink-700, bg-success-50, etc. */
+@theme {
+  --color-brand-50: #fdf4f0;
+  --color-brand-100: #fbe6dc;
+  --color-brand-200: #f5c9b3;
+  --color-brand-300: #eda683;
+  --color-brand-400: #de7a52;
+  --color-brand-500: #c85a34;
+  --color-brand-600: #b1492a;
+  --color-brand-700: #923a22;
+  --color-brand-800: #762f1c;
+  --color-brand-900: #5f2717;
+
+  --color-ink-50: #f7f5f4;
+  --color-ink-100: #ece7e4;
+  --color-ink-200: #d8cec8;
+  --color-ink-300: #b8a89e;
+  --color-ink-400: #8f7a6e;
+  --color-ink-500: #6f5c51;
+  --color-ink-600: #574539;
+  --color-ink-700: #45352c;
+  --color-ink-800: #332721;
+  --color-ink-900: #211a16;
+
+  --color-success-50: #ecfdf3;
+  --color-success-500: #16a34a;
+  --color-success-600: #15803d;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #d97706;
+  --color-warning-600: #b45309;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #dc2626;
+  --color-danger-600: #b91c1c;
+
+  --color-info-50: #eff6ff;
+  --color-info-500: #2563eb;
+  --color-info-600: #1d4ed8;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+/* Native HTML5 drag-and-drop affordance for the Kanban board */
+.kanban-dragging {
+  opacity: 0.5;
+}
+
+.kanban-drop-active {
+  background-color: var(--color-brand-50);
+  outline: 2px dashed var(--color-brand-300);
+  outline-offset: -4px;
+}
+
+@media (max-width: 640px) {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
 }

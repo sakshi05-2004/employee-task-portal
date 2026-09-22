@@ -21,10 +21,12 @@ async function createAdmin() {
 
     await Employee.create({
       name: "Admin",
+      designation: "Administrator",
       email: "admin@employeeportal.com",
       password: hashedPassword,
       role: "admin",
       isActive: true,
+      mustChangePassword: false,
     });
 
     console.log("Admin created successfully.");

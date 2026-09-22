@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectDB from "@/lib/mongodb";
 import Employee from "@/models/Employee";
+import { requireRole } from "@/lib/auth/guards";
 
 const DEFAULT_PASSWORD = "Employee@123";
 
 // CREATE EMPLOYEE
 export async function POST(request: Request) {
   try {
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
+
     const { name, designation, email } = await request.json();
 
     if (!name || !designation || !email) {
@@ -47,12 +51,14 @@ export async function POST(request: Request) {
       password: hashedPassword,
       role: "employee",
       isActive: true,
+      mustChangePassword: true,
     });
 
     return NextResponse.json(
       {
         success: true,
         message: "Employee created successfully",
+        defaultPassword: DEFAULT_PASSWORD,
         employee: {
           id: employee._id,
           name: employee.name,
@@ -79,6 +85,9 @@ export async function POST(request: Request) {
 // GET ALL EMPLOYEES
 export async function GET() {
   try {
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
+
     await connectDB();
 
     const employees = await Employee.find(
@@ -106,6 +115,9 @@ export async function GET() {
 // UPDATE EMPLOYEE
 export async function PUT(request: Request) {
   try {
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
+
     const { id, name, designation, email, isActive } =
       await request.json();
 
@@ -184,6 +196,9 @@ export async function PUT(request: Request) {
 // RESET EMPLOYEE PASSWORD
 export async function PATCH(request: Request) {
   try {
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
+
     const { id } = await request.json();
 
     if (!id) {
@@ -204,6 +219,7 @@ export async function PATCH(request: Request) {
       id,
       {
         password: hashedPassword,
+        mustChangePassword: true,
       },
       {
         new: true,
@@ -223,6 +239,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Employee password reset successfully",
+      defaultPassword: DEFAULT_PASSWORD,
       employee: {
         id: employee._id,
         name: employee.name,

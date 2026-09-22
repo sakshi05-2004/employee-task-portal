@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { initials } from "@/lib/format";
 
 interface Employee {
   _id: string;
@@ -9,6 +11,7 @@ interface Employee {
   email: string;
   role: "admin" | "employee";
   isActive: boolean;
+  mustChangePassword: boolean;
   createdAt: string;
 }
 
@@ -20,10 +23,9 @@ export default function EmployeeListPage() {
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState(false);
 
-  const [editingEmployee, setEditingEmployee] =
-    useState<Employee | null>(null);
-
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [editName, setEditName] = useState("");
   const [editDesignation, setEditDesignation] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -37,12 +39,14 @@ export default function EmployeeListPage() {
 
       if (!response.ok) {
         setMessage(data.message || "Failed to load employees");
+        setError(true);
         return;
       }
 
       setEmployees(data.employees);
     } catch {
       setMessage("Something went wrong while loading employees.");
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -84,10 +88,6 @@ export default function EmployeeListPage() {
 
   function closeEdit() {
     setEditingEmployee(null);
-    setEditName("");
-    setEditDesignation("");
-    setEditEmail("");
-    setEditIsActive(true);
   }
 
   async function saveEmployee() {
@@ -99,9 +99,7 @@ export default function EmployeeListPage() {
     try {
       const response = await fetch("/api/admin/employees", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: editingEmployee._id,
           name: editName,
@@ -115,217 +113,170 @@ export default function EmployeeListPage() {
 
       if (!response.ok) {
         setMessage(data.message || "Failed to update employee");
+        setError(true);
         return;
       }
 
       setMessage("Employee updated successfully.");
+      setError(false);
 
-      setEmployees((currentEmployees) =>
-        currentEmployees.map((employee) =>
-          employee._id === editingEmployee._id
-            ? data.employee
-            : employee
+      setEmployees((current) =>
+        current.map((employee) =>
+          employee._id === editingEmployee._id ? data.employee : employee
         )
       );
 
       closeEdit();
     } catch {
       setMessage("Something went wrong.");
+      setError(true);
     } finally {
       setSaving(false);
     }
   }
 
   async function resetPassword(employee: Employee) {
-    const confirmed = window.confirm(
-      `Reset password for ${employee.name}?`
-    );
-
+    const confirmed = window.confirm(`Reset password for ${employee.name}?`);
     if (!confirmed) return;
 
     try {
       const response = await fetch("/api/admin/employees", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: employee._id,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: employee._id }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
         setMessage(data.message || "Failed to reset password");
+        setError(true);
         return;
       }
 
       setMessage(
-        `Password reset successfully for ${employee.name}.`
+        `Password reset for ${employee.name}. Default password: ${data.defaultPassword} — they'll be asked to change it on next login.`
       );
+      setError(false);
     } catch {
       setMessage("Something went wrong.");
+      setError(true);
     }
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f5f7fb",
-        padding: "40px 20px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}
-      >
-        <h1>Employees</h1>
-
-        <p style={{ color: "#6b7280" }}>
-          View and manage employee accounts.
-        </p>
-
-        <div
-          style={{
-            background: "white",
-            padding: "20px",
-            borderRadius: "14px",
-            boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
-            marginTop: "25px",
-            display: "flex",
-            gap: "12px",
-            flexWrap: "wrap",
-          }}
-        >
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, designation or email..."
-            style={{
-              flex: 1,
-              minWidth: "280px",
-              padding: "12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-            }}
-          />
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-              padding: "12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-            }}
-          >
-            <option value="all">All Employees</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-
-        {loading && <p>Loading employees...</p>}
-
-        {message && (
-          <p
-            style={{
-              color: message.includes("successfully")
-                ? "green"
-                : "red",
-            }}
-          >
-            {message}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-ink-900">Employees</h1>
+          <p className="mt-1 text-sm text-ink-500">
+            View and manage employee accounts.
           </p>
-        )}
+        </div>
+        <Link
+          href="/admin/employees"
+          className="rounded-xl bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-ink-800"
+        >
+          + Add Employee
+        </Link>
+      </div>
 
-        {!loading && (
-          <div
-            style={{
-              background: "white",
-              borderRadius: "14px",
-              overflow: "hidden",
-              boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
-              marginTop: "20px",
-            }}
-          >
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-              }}
-            >
+      <div className="flex flex-wrap gap-3 rounded-2xl border border-ink-100 bg-white p-4 shadow-sm">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name, designation or email…"
+          className="min-w-[240px] flex-1 rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+        />
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+        >
+          <option value="all">All Employees</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      {loading && <p className="text-sm text-ink-400">Loading employees…</p>}
+
+      {message && (
+        <p
+          className={`rounded-xl px-4 py-2 text-sm ${
+            error ? "bg-danger-50 text-danger-600" : "bg-success-50 text-success-600"
+          }`}
+        >
+          {message}
+        </p>
+      )}
+
+      {!loading && (
+        <div className="overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse text-sm">
               <thead>
-                <tr style={{ background: "#f9fafb" }}>
-                  <th style={cellStyle}>Name</th>
-                  <th style={cellStyle}>Designation</th>
-                  <th style={cellStyle}>Email</th>
-                  <th style={cellStyle}>Status</th>
-                  <th style={cellStyle}>Actions</th>
+                <tr className="bg-ink-50/60 text-left text-xs font-semibold uppercase tracking-wide text-ink-400">
+                  <th className="px-5 py-3">Employee</th>
+                  <th className="px-5 py-3">Designation</th>
+                  <th className="px-5 py-3">Email</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Actions</th>
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="divide-y divide-ink-50">
                 {filteredEmployees.map((employee) => (
                   <tr key={employee._id}>
-                    <td style={cellStyle}>
-                      {employee.name}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                          {initials(employee.name)}
+                        </span>
+                        <div>
+                          <p className="font-semibold text-ink-900">
+                            {employee.name}
+                          </p>
+                          {employee.mustChangePassword && (
+                            <p className="text-xs text-warning-600">
+                              Default password active
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </td>
 
-                    <td style={cellStyle}>
+                    <td className="px-5 py-4 text-ink-600">
                       {employee.designation || "-"}
                     </td>
 
-                    <td style={cellStyle}>
-                      {employee.email}
-                    </td>
+                    <td className="px-5 py-4 text-ink-600">{employee.email}</td>
 
-                    <td style={cellStyle}>
+                    <td className="px-5 py-4">
                       <span
-                        style={{
-                          padding: "5px 9px",
-                          borderRadius: "999px",
-                          background: employee.isActive
-                            ? "#dcfce7"
-                            : "#fee2e2",
-                          color: employee.isActive
-                            ? "#166534"
-                            : "#991b1b",
-                          fontSize: "13px",
-                          fontWeight: 600,
-                        }}
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          employee.isActive
+                            ? "bg-success-50 text-success-600"
+                            : "bg-danger-50 text-danger-600"
+                        }`}
                       >
-                        {employee.isActive
-                          ? "Active"
-                          : "Inactive"}
+                        {employee.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
 
-                    <td style={cellStyle}>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          flexWrap: "wrap",
-                        }}
-                      >
+                    <td className="px-5 py-4">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => openEdit(employee)}
-                          style={actionButtonStyle}
+                          className="rounded-lg border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-600 hover:bg-ink-50"
                         >
                           Edit
                         </button>
-
                         <button
-                          onClick={() =>
-                            resetPassword(employee)
-                          }
-                          style={actionButtonStyle}
+                          onClick={() => resetPassword(employee)}
+                          className="rounded-lg border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-600 hover:bg-ink-50"
                         >
                           Reset Password
                         </button>
@@ -335,160 +286,81 @@ export default function EmployeeListPage() {
                 ))}
               </tbody>
             </table>
-
-            {filteredEmployees.length === 0 && (
-              <p
-                style={{
-                  padding: "25px",
-                  textAlign: "center",
-                  color: "#6b7280",
-                }}
-              >
-                No employees found.
-              </p>
-            )}
           </div>
-        )}
 
-        {editingEmployee && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.4)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
-            }}
-          >
-            <div
-              style={{
-                background: "white",
-                width: "100%",
-                maxWidth: "550px",
-                padding: "30px",
-                borderRadius: "14px",
-              }}
-            >
-              <h2>Edit Employee</h2>
+          {filteredEmployees.length === 0 && (
+            <p className="px-5 py-10 text-center text-sm text-ink-400">
+              No employees found.
+            </p>
+          )}
+        </div>
+      )}
 
-              <label>Name</label>
+      {editingEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-ink-900">Edit Employee</h2>
 
-              <input
-                value={editName}
-                onChange={(e) =>
-                  setEditName(e.target.value)
-                }
-                style={inputStyle}
-              />
+            <div className="mt-4 flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-medium text-ink-500">Name</label>
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
 
-              <label>Designation</label>
+              <div>
+                <label className="text-xs font-medium text-ink-500">
+                  Designation
+                </label>
+                <input
+                  value={editDesignation}
+                  onChange={(e) => setEditDesignation(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
 
-              <input
-                value={editDesignation}
-                onChange={(e) =>
-                  setEditDesignation(e.target.value)
-                }
-                style={inputStyle}
-              />
+              <div>
+                <label className="text-xs font-medium text-ink-500">Email</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                />
+              </div>
 
-              <label>Email</label>
-
-              <input
-                type="email"
-                value={editEmail}
-                onChange={(e) =>
-                  setEditEmail(e.target.value)
-                }
-                style={inputStyle}
-              />
-
-              <label
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  alignItems: "center",
-                  marginBottom: "20px",
-                }}
-              >
+              <label className="flex items-center gap-2 text-sm text-ink-700">
                 <input
                   type="checkbox"
                   checked={editIsActive}
-                  onChange={(e) =>
-                    setEditIsActive(e.target.checked)
-                  }
+                  onChange={(e) => setEditIsActive(e.target.checked)}
+                  className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
                 />
-
-                Active Employee
+                Active employee
               </label>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                }}
-              >
+              <div className="mt-2 flex gap-2">
                 <button
                   onClick={saveEmployee}
                   disabled={saving}
-                  style={primaryButtonStyle}
+                  className="rounded-xl bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-ink-800 disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving ? "Saving…" : "Save Changes"}
                 </button>
-
                 <button
                   onClick={closeEdit}
-                  style={secondaryButtonStyle}
+                  className="rounded-xl border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-600 hover:bg-ink-50"
                 >
                   Cancel
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </main>
+        </div>
+      )}
+    </div>
   );
 }
-
-const cellStyle = {
-  padding: "15px",
-  textAlign: "left" as const,
-  borderBottom: "1px solid #eee",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  marginTop: "8px",
-  marginBottom: "18px",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  boxSizing: "border-box" as const,
-};
-
-const actionButtonStyle = {
-  padding: "8px 12px",
-  border: "1px solid #d1d5db",
-  borderRadius: "7px",
-  background: "white",
-  cursor: "pointer",
-};
-
-const primaryButtonStyle = {
-  padding: "10px 16px",
-  border: "none",
-  borderRadius: "8px",
-  background: "#111827",
-  color: "white",
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle = {
-  padding: "10px 16px",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  background: "white",
-  cursor: "pointer",
-};

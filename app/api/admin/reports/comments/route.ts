@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Report from "@/models/Report";
+import { requireRole } from "@/lib/auth/guards";
 
 export async function PATCH(request: Request) {
   try {
+    const auth = await requireRole("admin");
+    if (auth.error) return auth.error;
+
     const { reportId, adminComment } = await request.json();
 
     if (!reportId || !adminComment) {
