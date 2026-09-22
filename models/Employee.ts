@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IEmployee extends Document {
   name: string;
+  designation: string;
   email: string;
   password: string;
   role: "admin" | "employee";
@@ -13,6 +14,12 @@ export interface IEmployee extends Document {
 const EmployeeSchema = new Schema<IEmployee>(
   {
     name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    designation: {
       type: String,
       required: true,
       trim: true,
