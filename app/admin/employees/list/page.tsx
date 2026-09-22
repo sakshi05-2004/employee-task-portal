@@ -5,14 +5,19 @@ import { useEffect, useState } from "react";
 interface Employee {
   _id: string;
   name: string;
-  designation: string;
+  designation?: string;
   email: string;
-  role: string;
+  role: "admin" | "employee";
   isActive: boolean;
+  createdAt: string;
 }
 
 export default function EmployeeListPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -25,12 +30,9 @@ export default function EmployeeListPage() {
   const [editIsActive, setEditIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [resettingId, setResettingId] = useState<string | null>(null);
-
   async function loadEmployees() {
     try {
       const response = await fetch("/api/admin/employees");
-
       const data = await response.json();
 
       if (!response.ok) {
@@ -50,7 +52,28 @@ export default function EmployeeListPage() {
     loadEmployees();
   }, []);
 
-  function startEditing(employee: Employee) {
+  useEffect(() => {
+    const searchText = search.toLowerCase().trim();
+
+    const filtered = employees.filter((employee) => {
+      const matchesSearch =
+        !searchText ||
+        employee.name.toLowerCase().includes(searchText) ||
+        (employee.designation || "").toLowerCase().includes(searchText) ||
+        employee.email.toLowerCase().includes(searchText);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && employee.isActive) ||
+        (statusFilter === "inactive" && !employee.isActive);
+
+      return matchesSearch && matchesStatus;
+    });
+
+    setFilteredEmployees(filtered);
+  }, [employees, search, statusFilter]);
+
+  function openEdit(employee: Employee) {
     setEditingEmployee(employee);
     setEditName(employee.name);
     setEditDesignation(employee.designation || "");
@@ -59,7 +82,7 @@ export default function EmployeeListPage() {
     setMessage("");
   }
 
-  function cancelEditing() {
+  function closeEdit() {
     setEditingEmployee(null);
     setEditName("");
     setEditDesignation("");
@@ -67,7 +90,7 @@ export default function EmployeeListPage() {
     setEditIsActive(true);
   }
 
-  async function handleUpdate() {
+  async function saveEmployee() {
     if (!editingEmployee) return;
 
     setSaving(true);
@@ -97,26 +120,28 @@ export default function EmployeeListPage() {
 
       setMessage("Employee updated successfully.");
 
-      cancelEditing();
-      await loadEmployees();
+      setEmployees((currentEmployees) =>
+        currentEmployees.map((employee) =>
+          employee._id === editingEmployee._id
+            ? data.employee
+            : employee
+        )
+      );
+
+      closeEdit();
     } catch {
-      setMessage("Something went wrong while updating employee.");
+      setMessage("Something went wrong.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleResetPassword(employee: Employee) {
+  async function resetPassword(employee: Employee) {
     const confirmed = window.confirm(
-      `Reset the password for ${employee.name}?`
+      `Reset password for ${employee.name}?`
     );
 
-    if (!confirmed) {
-      return;
-    }
-
-    setResettingId(employee._id);
-    setMessage("");
+    if (!confirmed) return;
 
     try {
       const response = await fetch("/api/admin/employees", {
@@ -140,9 +165,7 @@ export default function EmployeeListPage() {
         `Password reset successfully for ${employee.name}.`
       );
     } catch {
-      setMessage("Something went wrong while resetting password.");
-    } finally {
-      setResettingId(null);
+      setMessage("Something went wrong.");
     }
   }
 
@@ -163,8 +186,49 @@ export default function EmployeeListPage() {
         <h1>Employees</h1>
 
         <p style={{ color: "#6b7280" }}>
-          Manage all employees in the portal.
+          View and manage employee accounts.
         </p>
+
+        <div
+          style={{
+            background: "white",
+            padding: "20px",
+            borderRadius: "14px",
+            boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+            marginTop: "25px",
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, designation or email..."
+            style={{
+              flex: 1,
+              minWidth: "280px",
+              padding: "12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+            }}
+          />
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: "12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+            }}
+          >
+            <option value="all">All Employees</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
 
         {loading && <p>Loading employees...</p>}
 
@@ -187,6 +251,7 @@ export default function EmployeeListPage() {
               borderRadius: "14px",
               overflow: "hidden",
               boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+              marginTop: "20px",
             }}
           >
             <table
@@ -200,27 +265,45 @@ export default function EmployeeListPage() {
                   <th style={cellStyle}>Name</th>
                   <th style={cellStyle}>Designation</th>
                   <th style={cellStyle}>Email</th>
-                  <th style={cellStyle}>Role</th>
                   <th style={cellStyle}>Status</th>
                   <th style={cellStyle}>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {employees.map((employee) => (
+                {filteredEmployees.map((employee) => (
                   <tr key={employee._id}>
-                    <td style={cellStyle}>{employee.name}</td>
+                    <td style={cellStyle}>
+                      {employee.name}
+                    </td>
 
                     <td style={cellStyle}>
                       {employee.designation || "-"}
                     </td>
 
-                    <td style={cellStyle}>{employee.email}</td>
-
-                    <td style={cellStyle}>{employee.role}</td>
+                    <td style={cellStyle}>
+                      {employee.email}
+                    </td>
 
                     <td style={cellStyle}>
-                      {employee.isActive ? "Active" : "Inactive"}
+                      <span
+                        style={{
+                          padding: "5px 9px",
+                          borderRadius: "999px",
+                          background: employee.isActive
+                            ? "#dcfce7"
+                            : "#fee2e2",
+                          color: employee.isActive
+                            ? "#166534"
+                            : "#991b1b",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {employee.isActive
+                          ? "Active"
+                          : "Inactive"}
+                      </span>
                     </td>
 
                     <td style={cellStyle}>
@@ -232,39 +315,19 @@ export default function EmployeeListPage() {
                         }}
                       >
                         <button
-                          onClick={() => startEditing(employee)}
-                          style={{
-                            padding: "8px 14px",
-                            border: "none",
-                            borderRadius: "6px",
-                            background: "#111827",
-                            color: "white",
-                            cursor: "pointer",
-                          }}
+                          onClick={() => openEdit(employee)}
+                          style={actionButtonStyle}
                         >
                           Edit
                         </button>
 
                         <button
                           onClick={() =>
-                            handleResetPassword(employee)
+                            resetPassword(employee)
                           }
-                          disabled={resettingId === employee._id}
-                          style={{
-                            padding: "8px 14px",
-                            border: "1px solid #d1d5db",
-                            borderRadius: "6px",
-                            background: "white",
-                            color: "#111827",
-                            cursor:
-                              resettingId === employee._id
-                                ? "not-allowed"
-                                : "pointer",
-                          }}
+                          style={actionButtonStyle}
                         >
-                          {resettingId === employee._id
-                            ? "Resetting..."
-                            : "Reset Password"}
+                          Reset Password
                         </button>
                       </div>
                     </td>
@@ -273,11 +336,12 @@ export default function EmployeeListPage() {
               </tbody>
             </table>
 
-            {employees.length === 0 && (
+            {filteredEmployees.length === 0 && (
               <p
                 style={{
                   padding: "25px",
                   textAlign: "center",
+                  color: "#6b7280",
                 }}
               >
                 No employees found.
@@ -289,93 +353,97 @@ export default function EmployeeListPage() {
         {editingEmployee && (
           <div
             style={{
-              marginTop: "30px",
-              background: "white",
-              padding: "30px",
-              borderRadius: "14px",
-              boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
             }}
           >
-            <h2>Edit Employee</h2>
-
-            <label>Name</label>
-
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              style={inputStyle}
-            />
-
-            <label>Designation</label>
-
-            <input
-              type="text"
-              value={editDesignation}
-              onChange={(e) => setEditDesignation(e.target.value)}
-              style={inputStyle}
-            />
-
-            <label>Email</label>
-
-            <input
-              type="email"
-              value={editEmail}
-              onChange={(e) => setEditEmail(e.target.value)}
-              style={inputStyle}
-            />
-
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                marginBottom: "20px",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={editIsActive}
-                onChange={(e) =>
-                  setEditIsActive(e.target.checked)
-                }
-              />
-              Active Employee
-            </label>
-
             <div
               style={{
-                display: "flex",
-                gap: "10px",
+                background: "white",
+                width: "100%",
+                maxWidth: "550px",
+                padding: "30px",
+                borderRadius: "14px",
               }}
             >
-              <button
-                onClick={handleUpdate}
-                disabled={saving}
-                style={{
-                  padding: "10px 18px",
-                  border: "none",
-                  borderRadius: "7px",
-                  background: "#111827",
-                  color: "white",
-                  cursor: saving ? "not-allowed" : "pointer",
-                }}
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
+              <h2>Edit Employee</h2>
 
-              <button
-                onClick={cancelEditing}
+              <label>Name</label>
+
+              <input
+                value={editName}
+                onChange={(e) =>
+                  setEditName(e.target.value)
+                }
+                style={inputStyle}
+              />
+
+              <label>Designation</label>
+
+              <input
+                value={editDesignation}
+                onChange={(e) =>
+                  setEditDesignation(e.target.value)
+                }
+                style={inputStyle}
+              />
+
+              <label>Email</label>
+
+              <input
+                type="email"
+                value={editEmail}
+                onChange={(e) =>
+                  setEditEmail(e.target.value)
+                }
+                style={inputStyle}
+              />
+
+              <label
                 style={{
-                  padding: "10px 18px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "7px",
-                  background: "white",
-                  cursor: "pointer",
+                  display: "flex",
+                  gap: "8px",
+                  alignItems: "center",
+                  marginBottom: "20px",
                 }}
               >
-                Cancel
-              </button>
+                <input
+                  type="checkbox"
+                  checked={editIsActive}
+                  onChange={(e) =>
+                    setEditIsActive(e.target.checked)
+                  }
+                />
+
+                Active Employee
+              </label>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                }}
+              >
+                <button
+                  onClick={saveEmployee}
+                  disabled={saving}
+                  style={primaryButtonStyle}
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
+
+                <button
+                  onClick={closeEdit}
+                  style={secondaryButtonStyle}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -398,4 +466,29 @@ const inputStyle = {
   border: "1px solid #d1d5db",
   borderRadius: "8px",
   boxSizing: "border-box" as const,
+};
+
+const actionButtonStyle = {
+  padding: "8px 12px",
+  border: "1px solid #d1d5db",
+  borderRadius: "7px",
+  background: "white",
+  cursor: "pointer",
+};
+
+const primaryButtonStyle = {
+  padding: "10px 16px",
+  border: "none",
+  borderRadius: "8px",
+  background: "#111827",
+  color: "white",
+  cursor: "pointer",
+};
+
+const secondaryButtonStyle = {
+  padding: "10px 16px",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  background: "white",
+  cursor: "pointer",
 };
