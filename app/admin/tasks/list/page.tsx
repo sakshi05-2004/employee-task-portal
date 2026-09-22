@@ -21,6 +21,11 @@ interface Task {
 
 export default function TaskListPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -45,6 +50,30 @@ export default function TaskListPage() {
   useEffect(() => {
     loadTasks();
   }, []);
+
+  useEffect(() => {
+    const searchText = search.toLowerCase().trim();
+
+    const filtered = tasks.filter((task) => {
+      const matchesSearch =
+        !searchText ||
+        task.title.toLowerCase().includes(searchText) ||
+        (task.description || "")
+          .toLowerCase()
+          .includes(searchText) ||
+        (task.assignedTo?.name || "")
+          .toLowerCase()
+          .includes(searchText);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        task.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+
+    setFilteredTasks(filtered);
+  }, [tasks, search, statusFilter]);
 
   function formatDate(date?: string) {
     if (!date) return "-";
@@ -97,6 +126,48 @@ export default function TaskListPage() {
           View and manage all employee tasks.
         </p>
 
+        <div
+          style={{
+            background: "white",
+            padding: "20px",
+            borderRadius: "14px",
+            boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+            marginTop: "25px",
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search task or employee..."
+            style={{
+              flex: 1,
+              minWidth: "280px",
+              padding: "12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+            }}
+          />
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: "12px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+            }}
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
         {loading && <p>Loading tasks...</p>}
 
         {message && (
@@ -112,6 +183,7 @@ export default function TaskListPage() {
               borderRadius: "14px",
               overflow: "hidden",
               boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+              marginTop: "20px",
             }}
           >
             <table
@@ -131,7 +203,7 @@ export default function TaskListPage() {
               </thead>
 
               <tbody>
-                {tasks.map((task) => (
+                {filteredTasks.map((task) => (
                   <tr key={task._id}>
                     <td style={cellStyle}>
                       <strong>{task.title}</strong>
@@ -179,11 +251,12 @@ export default function TaskListPage() {
               </tbody>
             </table>
 
-            {tasks.length === 0 && (
+            {filteredTasks.length === 0 && (
               <p
                 style={{
                   padding: "25px",
                   textAlign: "center",
+                  color: "#6b7280",
                 }}
               >
                 No tasks found.
