@@ -16,18 +16,57 @@ interface Stats {
 }
 
 const STATUS_SEGMENTS = [
-  { key: "pendingTasks", label: "To Do", color: "bg-danger-500", swatch: "bg-danger-500" },
-  { key: "inProgressTasks", label: "In Progress", color: "bg-warning-500", swatch: "bg-warning-500" },
-  { key: "completedTasks", label: "Completed", color: "bg-success-500", swatch: "bg-success-500" },
+  {
+    key: "pendingTasks",
+    label: "To Do",
+    color: "bg-danger-500",
+    swatch: "bg-danger-500",
+  },
+  {
+    key: "inProgressTasks",
+    label: "In Progress",
+    color: "bg-warning-500",
+    swatch: "bg-warning-500",
+  },
+  {
+    key: "completedTasks",
+    label: "Completed",
+    color: "bg-success-500",
+    swatch: "bg-success-500",
+  },
 ] as const;
 
 const QUICK_LINKS = [
-  { title: "Kanban Board", description: "Drag tasks across every stage", href: "/admin/tasks/board" },
-  { title: "Create Task", description: "Assign a new task to an employee", href: "/admin/tasks" },
-  { title: "All Tasks", description: "Search, filter and open task details", href: "/admin/tasks/list" },
-  { title: "Employees", description: "Manage accounts and reset passwords", href: "/admin/employees/list" },
-  { title: "Add Employee", description: "Create a new employee account", href: "/admin/employees" },
-  { title: "Reports", description: "Review submissions and leave feedback", href: "/admin/reports" },
+  {
+    title: "Kanban Board",
+    description: "Drag tasks across every stage",
+    href: "/admin/tasks/board",
+  },
+  {
+    title: "Create Task",
+    description: "Assign a new task to an employee",
+    href: "/admin/tasks",
+  },
+  {
+    title: "All Tasks",
+    description: "Search, filter and open task details",
+    href: "/admin/tasks/list",
+  },
+  {
+    title: "Employees",
+    description: "Manage accounts and reset passwords",
+    href: "/admin/employees/list",
+  },
+  {
+    title: "Add Employee",
+    description: "Create a new employee account",
+    href: "/admin/employees",
+  },
+  {
+    title: "Reports",
+    description: "Review submissions and leave feedback",
+    href: "/admin/reports",
+  },
 ];
 
 export default function AdminDashboard() {
@@ -38,8 +77,11 @@ export default function AdminDashboard() {
     fetch("/api/admin/stats")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) setStats(data.stats);
-        else setMessage(data.message || "Failed to load dashboard stats");
+        if (data.success) {
+          setStats(data.stats);
+        } else {
+          setMessage(data.message || "Failed to load dashboard stats");
+        }
       })
       .catch(() => setMessage("Failed to load dashboard stats"));
   }, []);
@@ -61,19 +103,65 @@ export default function AdminDashboard() {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Active employees" value={stats?.activeEmployees} suffix={`/ ${stats?.totalEmployees ?? "…"}`} />
-        <StatTile label="Total tasks" value={stats?.totalTasks} />
-        <StatTile
-          label="Overdue tasks"
-          value={stats?.overdueTasks}
-          tone={stats && stats.overdueTasks > 0 ? "danger" : "default"}
-        />
-        <StatTile
-          label="Reports awaiting reply"
-          value={stats?.reportsAwaitingComment}
-          suffix={`/ ${stats?.totalReports ?? "…"}`}
-        />
+      {/* Dashboard Summary Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <Link
+          href="/admin/employees/list?filter=active"
+          className="block transition hover:-translate-y-0.5"
+        >
+          <StatTile
+            label="Active employees"
+            value={stats?.activeEmployees}
+            suffix={`/ ${stats?.totalEmployees ?? "…"}`}
+            clickable
+          />
+        </Link>
+
+        <Link
+          href="/admin/tasks/list"
+          className="block transition hover:-translate-y-0.5"
+        >
+          <StatTile
+            label="Total tasks"
+            value={stats?.totalTasks}
+            clickable
+          />
+        </Link>
+
+        <Link
+          href="/admin/tasks/list?filter=pending"
+          className="block transition hover:-translate-y-0.5"
+        >
+          <StatTile
+            label="Pending tasks"
+            value={stats?.pendingTasks}
+            clickable
+          />
+        </Link>
+
+        <Link
+          href="/admin/tasks/list?filter=overdue"
+          className="block transition hover:-translate-y-0.5"
+        >
+          <StatTile
+            label="Overdue tasks"
+            value={stats?.overdueTasks}
+            tone={stats && stats.overdueTasks > 0 ? "danger" : "default"}
+            clickable
+          />
+        </Link>
+
+        <Link
+          href="/admin/reports?filter=awaiting"
+          className="block transition hover:-translate-y-0.5"
+        >
+          <StatTile
+            label="Reports awaiting reply"
+            value={stats?.reportsAwaitingComment}
+            suffix={`/ ${stats?.totalReports ?? "…"}`}
+            clickable
+          />
+        </Link>
       </div>
 
       <div className="rounded-2xl border border-ink-100 bg-white p-6 shadow-sm">
@@ -81,7 +169,10 @@ export default function AdminDashboard() {
           <h2 className="text-sm font-semibold text-ink-800">
             Task status breakdown
           </h2>
-          <span className="text-xs text-ink-400">{total} total tasks</span>
+
+          <span className="text-xs text-ink-400">
+            {total} total tasks
+          </span>
         </div>
 
         {total > 0 ? (
@@ -90,6 +181,7 @@ export default function AdminDashboard() {
               {STATUS_SEGMENTS.map((segment, index) => {
                 const value = stats ? stats[segment.key] : 0;
                 const pct = total > 0 ? (value / total) * 100 : 0;
+
                 if (pct === 0) return null;
 
                 return (
@@ -109,12 +201,22 @@ export default function AdminDashboard() {
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
               {STATUS_SEGMENTS.map((segment) => {
                 const value = stats ? stats[segment.key] : 0;
-                const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                const pct =
+                  total > 0 ? Math.round((value / total) * 100) : 0;
 
                 return (
-                  <div key={segment.key} className="flex items-center gap-2 text-sm">
-                    <span className={`h-2.5 w-2.5 rounded-full ${segment.swatch}`} />
-                    <span className="font-medium text-ink-700">{segment.label}</span>
+                  <div
+                    key={segment.key}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${segment.swatch}`}
+                    />
+
+                    <span className="font-medium text-ink-700">
+                      {segment.label}
+                    </span>
+
                     <span className="text-ink-400">
                       {value} ({pct}%)
                     </span>
@@ -124,12 +226,17 @@ export default function AdminDashboard() {
             </div>
           </>
         ) : (
-          <p className="mt-4 text-sm text-ink-400">No tasks created yet.</p>
+          <p className="mt-4 text-sm text-ink-400">
+            No tasks created yet.
+          </p>
         )}
       </div>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold text-ink-800">Quick actions</h2>
+        <h2 className="mb-3 text-sm font-semibold text-ink-800">
+          Quick actions
+        </h2>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {QUICK_LINKS.map((link) => (
             <Link
@@ -140,7 +247,11 @@ export default function AdminDashboard() {
               <h3 className="font-semibold text-ink-900 group-hover:text-brand-700">
                 {link.title}
               </h3>
-              <p className="mt-1 text-sm text-ink-500">{link.description}</p>
+
+              <p className="mt-1 text-sm text-ink-500">
+                {link.description}
+              </p>
+
               <span className="mt-3 inline-block text-sm font-semibold text-brand-600">
                 Open →
               </span>
@@ -157,21 +268,35 @@ function StatTile({
   value,
   suffix,
   tone = "default",
+  clickable = false,
 }: {
   label: string;
   value?: number;
   suffix?: string;
   tone?: "default" | "danger";
+  clickable?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
-      <p className="text-xs font-medium text-ink-400">{label}</p>
+    <div
+      className={`rounded-2xl border border-ink-100 bg-white p-5 shadow-sm ${
+        clickable
+          ? "cursor-pointer transition hover:border-brand-200 hover:shadow-md"
+          : ""
+      }`}
+    >
+      <p className="text-xs font-medium text-ink-400">
+        {label}
+      </p>
+
       <p
         className={`mt-1.5 text-2xl font-semibold ${
-          tone === "danger" && value ? "text-danger-600" : "text-ink-900"
+          tone === "danger" && value
+            ? "text-danger-600"
+            : "text-ink-900"
         }`}
       >
         {value ?? "—"}
+
         {suffix && (
           <span className="ml-1 text-sm font-medium text-ink-400">
             {suffix}

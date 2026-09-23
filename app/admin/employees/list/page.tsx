@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { initials } from "@/lib/format";
 
 interface Employee {
@@ -16,10 +17,14 @@ interface Employee {
 }
 
 export default function EmployeeListPage() {
+  const searchParams = useSearchParams();
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(
+    searchParams.get("filter") === "active" ? "active" : "all"
+  );
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");

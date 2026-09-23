@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { formatDate, initials } from "@/lib/format";
 
 interface Employee {
@@ -29,12 +30,18 @@ interface Report {
 }
 
 export default function AdminReportsPage() {
+  const searchParams = useSearchParams();
+
   const [reports, setReports] = useState<Report[]>([]);
   const [comments, setComments] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
+
+  const [awaitingOnly, setAwaitingOnly] = useState(
+    searchParams.get("filter") === "awaiting"
+  );
 
   async function loadReports() {
     try {
@@ -109,19 +116,40 @@ export default function AdminReportsPage() {
     }
   }
 
+  const displayedReports = awaitingOnly
+    ? reports.filter((report) => !report.adminComment?.trim())
+    : reports;
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink-900">Employee Reports</h1>
-        <p className="mt-1 text-sm text-ink-500">
-          Review submissions and leave feedback for each employee.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-ink-900">Employee Reports</h1>
+          <p className="mt-1 text-sm text-ink-500">
+            Review submissions and leave feedback for each employee.
+          </p>
+        </div>
+
+        {awaitingOnly && (
+          <button
+            type="button"
+            onClick={() => {
+              setAwaitingOnly(false);
+              window.history.replaceState(null, "", "/admin/reports");
+            }}
+            className="rounded-xl border border-warning-200 bg-warning-50 px-4 py-2.5 text-sm font-semibold text-warning-700 hover:bg-warning-100"
+          >
+            Showing Awaiting Reply
+          </button>
+        )}
       </div>
 
       {message && (
         <p
           className={`rounded-xl px-4 py-2 text-sm ${
-            error ? "bg-danger-50 text-danger-600" : "bg-success-50 text-success-600"
+            error
+              ? "bg-danger-50 text-danger-600"
+              : "bg-success-50 text-success-600"
           }`}
         >
           {message}
@@ -132,7 +160,7 @@ export default function AdminReportsPage() {
 
       {!loading && (
         <div className="flex flex-col gap-5">
-          {reports.map((report) => (
+          {displayedReports.map((report) => (
             <div
               key={report._id}
               className="rounded-2xl border border-ink-100 bg-white p-6 shadow-sm"
@@ -142,6 +170,7 @@ export default function AdminReportsPage() {
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
                     {initials(report.employee?.name)}
                   </span>
+
                   <div>
                     <Link
                       href={`/admin/tasks/${report.task?._id}`}
@@ -149,10 +178,12 @@ export default function AdminReportsPage() {
                     >
                       {report.task?.title || "Task"}
                     </Link>
+
                     <p className="text-sm text-ink-500">
                       {report.employee?.name || "-"} ·{" "}
                       {report.employee?.designation || "Employee"}
                     </p>
+
                     <p className="mt-0.5 text-xs text-ink-400">
                       Submitted {formatDate(report.submittedAt)}
                     </p>
@@ -172,6 +203,7 @@ export default function AdminReportsPage() {
 
               <div className="mt-4 rounded-xl bg-ink-50/60 p-4">
                 <p className="text-xs font-semibold text-ink-500">Summary</p>
+
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink-700">
                   {report.summary}
                 </p>
@@ -217,9 +249,11 @@ export default function AdminReportsPage() {
             </div>
           ))}
 
-          {reports.length === 0 && (
+          {displayedReports.length === 0 && (
             <div className="rounded-2xl border border-ink-100 bg-white p-10 text-center text-sm text-ink-400 shadow-sm">
-              No reports submitted yet.
+              {awaitingOnly
+                ? "No reports are awaiting a reply."
+                : "No reports submitted yet."}
             </div>
           )}
         </div>
