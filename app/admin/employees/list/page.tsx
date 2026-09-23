@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { initials } from "@/lib/format";
@@ -16,7 +16,7 @@ interface Employee {
   createdAt: string;
 }
 
-export default function EmployeeListPage() {
+function EmployeeListPageContent() {
   const searchParams = useSearchParams();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -160,7 +160,7 @@ export default function EmployeeListPage() {
       }
 
       setMessage(
-        `Password reset for ${employee.name}. Default password: ${data.defaultPassword} — they'll be asked to change it on next login.`
+        `Password reset for ${employee.name}. Default password: ${data.defaultPassword} â€” they'll be asked to change it on next login.`
       );
       setError(false);
     } catch {
@@ -191,7 +191,7 @@ export default function EmployeeListPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, designation or email…"
+          placeholder="Search name, designation or emailâ€¦"
           className="min-w-[240px] flex-1 rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
         />
 
@@ -206,7 +206,7 @@ export default function EmployeeListPage() {
         </select>
       </div>
 
-      {loading && <p className="text-sm text-ink-400">Loading employees…</p>}
+      {loading && <p className="text-sm text-ink-400">Loading employeesâ€¦</p>}
 
       {message && (
         <p
@@ -353,7 +353,7 @@ export default function EmployeeListPage() {
                   disabled={saving}
                   className="rounded-xl bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-ink-800 disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Save Changes"}
+                  {saving ? "Savingâ€¦" : "Save Changes"}
                 </button>
                 <button
                   onClick={closeEdit}
@@ -367,5 +367,15 @@ export default function EmployeeListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+
+
+export default function EmployeeListPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-ink-400">Loading employees…</div>}>
+      <EmployeeListPageContent />
+    </Suspense>
   );
 }

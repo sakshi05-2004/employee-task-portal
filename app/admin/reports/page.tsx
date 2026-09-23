@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatDate, initials } from "@/lib/format";
@@ -29,7 +29,7 @@ interface Report {
   adminComment?: string;
 }
 
-export default function AdminReportsPage() {
+function AdminReportsPageContent() {
   const searchParams = useSearchParams();
 
   const [reports, setReports] = useState<Report[]>([]);
@@ -156,7 +156,7 @@ export default function AdminReportsPage() {
         </p>
       )}
 
-      {loading && <p className="text-sm text-ink-400">Loading reports…</p>}
+      {loading && <p className="text-sm text-ink-400">Loading reportsÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦</p>}
 
       {!loading && (
         <div className="flex flex-col gap-5">
@@ -180,7 +180,7 @@ export default function AdminReportsPage() {
                     </Link>
 
                     <p className="text-sm text-ink-500">
-                      {report.employee?.name || "-"} ·{" "}
+                      {report.employee?.name || "-"} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â·{" "}
                       {report.employee?.designation || "Employee"}
                     </p>
 
@@ -216,7 +216,7 @@ export default function AdminReportsPage() {
                   rel="noopener noreferrer"
                   className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline"
                 >
-                  🔗 Open Document
+                  ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Open Document
                 </a>
               )}
 
@@ -233,7 +233,7 @@ export default function AdminReportsPage() {
                       [report._id]: e.target.value,
                     }))
                   }
-                  placeholder="Write a comment or question…"
+                  placeholder="Write a comment or questionÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦"
                   rows={3}
                   className="mt-2 w-full resize-y rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
                 />
@@ -243,7 +243,7 @@ export default function AdminReportsPage() {
                   disabled={savingId === report._id}
                   className="mt-2 rounded-lg bg-ink-900 px-4 py-2 text-sm font-semibold text-white hover:bg-ink-800 disabled:opacity-50"
                 >
-                  {savingId === report._id ? "Saving…" : "Save Comment"}
+                  {savingId === report._id ? "SavingÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" : "Save Comment"}
                 </button>
               </div>
             </div>
@@ -261,3 +261,13 @@ export default function AdminReportsPage() {
     </div>
   );
 }
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-ink-400">Loading reports...</div>}>
+      <AdminReportsPageContent />
+    </Suspense>
+  );
+}
+
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
@@ -21,7 +21,7 @@ type DateFilter =
   | "30days"
   | "custom";
 
-export default function TaskListPage() {
+function TaskListPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -323,7 +323,7 @@ export default function TaskListPage() {
       </div>
 
       {loading && (
-        <p className="text-sm text-ink-400">Loading tasks…</p>
+        <p className="text-sm text-ink-400">Loading tasksâ€¦</p>
       )}
 
       {message && (
@@ -408,5 +408,14 @@ export default function TaskListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+
+export default function TaskListPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-ink-400">Loading tasks...</div>}>
+      <TaskListPageContent />
+    </Suspense>
   );
 }
