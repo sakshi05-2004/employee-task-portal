@@ -15,10 +15,7 @@ export async function GET() {
 
     const tasks = await Task.find({
       assignedTo: auth.user.id,
-    })
-      .populate("assignedTo", "name designation email")
-      .populate("createdBy", "name role")
-      .sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 });
 
     return NextResponse.json({
       success: true,
@@ -57,7 +54,10 @@ export async function POST(request: Request) {
 
     if (priority && !ALLOWED_PRIORITIES.includes(priority)) {
       return NextResponse.json(
-        { success: false, message: "Invalid priority" },
+        {
+          success: false,
+          message: "Invalid priority",
+        },
         { status: 400 }
       );
     }
@@ -73,9 +73,6 @@ export async function POST(request: Request) {
       priority: priority || "medium",
       status: "pending",
     });
-
-    await task.populate("assignedTo", "name designation email");
-    await task.populate("createdBy", "name role");
 
     return NextResponse.json(
       {
@@ -146,7 +143,7 @@ export async function PATCH(request: Request) {
         new: true,
         runValidators: true,
       }
-    ).populate("assignedTo", "name designation email");
+    );
 
     if (!task) {
       return NextResponse.json(
